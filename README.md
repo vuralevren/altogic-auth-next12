@@ -1,17 +1,17 @@
-# Authentication with Nuxt 3 & Altogic
+# Authentication with Next 3 & Altogic
 
 ## Introduction
 **Altogic** is a Backend as a Service (BaaS) platform and provides a variety of services in modern web and mobile development. Most of the modern applications using React or other libraries/frameworks require to know the identity of a user. And this necessity allows an app to securely save user data and session in the cloud and provide more personalized functionalities and views to users.
 
 Altogic has an Authentication service that integrates and implements well in JAMstack apps. It has a ready-to-use Javascript client library, and it supports many authentication providers such as email/password, phone number, magic link, and OAuth providers like Google, Facebook, Twitter, Github, etc.,
 
-In this tutorial, we will implement email/password authentication with Vue.js and take a look how as a Vue developer we build applications and integrate with Altogic Authentication.
+In this tutorial, we will implement email/password authentication with Next.js and take a look how as a Next developer we build applications and integrate with Altogic Authentication.
 
 After completion of this tutorial, you will learn:
 
 * How to create sample screens to display forms like login and signup.
 * How to create a home screen and authorize only logged-in users.
-* How to create different routes using the vue-router.
+* How to create different routes using the next-router.
 * How to create an authentication flow by conditionally rendering between these pages whether a user is logged-in or not.
 * How to authenticate users using magic link
 * How to update user profile info and upload a profile picture
@@ -56,7 +56,7 @@ Click the **Home** icon at the left sidebar to copy the envUrl and clientKey.
 
 ![Client Keys](github/4-client-keys.png)
 
-Once the user created successfully, our Vue.js app will route the user to the Verification page, and a verification email will be sent to the user’s email address. When the user clicks the link in the mail, the user will navigate to the redirect page to grant authentication rights. After successfully creating a session on the Redirect page, users will be redirected to the Home page.
+Once the user created successfully, our Next.js app will route the user to the Verification page, and a verification email will be sent to the user’s email address. When the user clicks the link in the mail, the user will navigate to the redirect page to grant authentication rights. After successfully creating a session on the Redirect page, users will be redirected to the Home page.
 
 ## Quick Tip
 > If you want, you can deactivate or customize the mail verification from **App Settings -> Authentication** in Logic Designer.
@@ -111,7 +111,7 @@ export default altogic;
 
 ## Create Routes
 
-Nuxt has built-in file system routing. It means that we can create a page by creating a file in the **pages/** directory.
+Next has built-in file system routing. It means that we can create a page by creating a file in the **pages/** directory.
 
 Let's create some views in **pages/** folder as below:
 * index.js
@@ -471,7 +471,6 @@ export async function getServerSideProps(context) {
 }
 
 export default ProfileView;
-
 ```
 
 ### Replacing pages/auth-redirect.js with the following code:
@@ -591,8 +590,127 @@ export default async function handler(req, res) {
 }
 ```
 
+## Updating User Info
+Updating some user operations, we will create a folder named **component** in project root directory.
+
+### Replacing components/UserInfo.js with the following code:
+
+```js
+import { useRef, useState } from "react";
+import altogic from "../configs/altogic";
+
+function UserInfo({ user, setUser }) {
+  const inputRef = useRef();
+
+  const [inpName, setInpName] = useState("");
+
+  const [changeMode, setChangeMode] = useState(false);
+  const [errors, setErrors] = useState(null);
+
+  const handleNameChange = () => {
+    setChangeMode(true);
+    setTimeout(() => {
+      console.log(inputRef);
+      inputRef.current.focus();
+    }, 100);
+  };
+
+  const handleKeyDown = async (e) => {
+    if (e.code === "Enter") {
+      setErrors(null);
+
+      const { data: updatedUser, errors: apiErrors } = await altogic.db
+        .model("users")
+        .object(user._id)
+        .update({ name: inpName });
+
+      if (apiErrors) setErrors(apiErrors.items[0].message);
+      else setUser(updatedUser);
+
+      setChangeMode(false);
+    }
+  };
+
+  return (
+    <section className="border p-4 w-full">
+      {changeMode ? (
+        <div className="flex items-center justify-center">
+          <input
+            ref={inputRef}
+            onKeyDown={handleKeyDown}
+            type="text"
+            className="border-none text-3xl text-center"
+            onChange={(e) => setInpName(e.target.value)}
+            value={inpName}
+          />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h1 className="text-3xl">Hello, {user?.name}</h1>
+          <button onClick={handleNameChange} className="border p-2">
+            Change name
+          </button>
+        </div>
+      )}
+      {errors && <div>{errors}</div>}
+    </section>
+  );
+}
+
+export default UserInfo;
+```
+
+### Replacing components/Sessions.js with the following code:
+```js
+import { altogic, altogicWithToken } from "../configs/altogic";
+
+function Sessions({ sessions, setSessions }) {
+  const logoutSession = async (session) => {
+    const { errors } = await altogicWithToken(session.token).auth.signOut();
+    if (!errors) {
+      setSessions(sessions.filter((s) => s.token !== session.token));
+    }
+  };
+
+  return (
+    <div className="border p-4 space-y-4">
+      <p className="text-3xl">All Sessions</p>
+      <ul className="flex flex-col gap-2">
+        {sessions?.map((session) => (
+          <li key={session.token} className="flex justify-between gap-12">
+            <div>
+              {session.isCurrent && <span> Current Session </span>}
+              <span>
+                {" "}
+                <strong>Device name: </strong>
+                {session?.userAgent.device.family}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>
+                {new Date(session.creationDtm).toLocaleDateString("en-US")}
+              </span>
+              {!session.isCurrent && (
+                <button
+                  onClick={() => logoutSession(session)}
+                  className="border grid place-items-center p-2 h-8 w-8 aspect-square leading-none"
+                >
+                  X
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default Sessions;
+```
+
 ## Bonus: Upload Profile Photo
-Let's create a Vue component for user can upload a profile photo. Create a folder named **components** in your project root directory.
+Let's create a Next.js component for user can upload a profile photo. 
 
 ```javascript
 // components/Avatar.js
