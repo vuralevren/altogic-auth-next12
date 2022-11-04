@@ -1,4 +1,4 @@
-# Authentication with Next 3 & Altogic
+# How to Authenticate Email and Password Using Next.js & Altogic
 
 ## Introduction
 **Altogic** is a Backend as a Service (BaaS) platform and provides a variety of services in modern web and mobile development. Most of the modern applications using React or other libraries/frameworks require to know the identity of a user. And this necessity allows an app to securely save user data and session in the cloud and provide more personalized functionalities and views to users.
@@ -93,8 +93,8 @@ Open altogic.js and paste below code block to export the altogic client instance
 import { createClient } from "altogic";
 
 // This `envUrl` and `clientKey` is sample you need to create your own.
-let envUrl = "https://auth.c1-europe.altogic.com";
-let clientKey = "ccf9aab72f47484bba21e1706d61df0c";
+let envUrl = 'https://auth.c1-na.altogic.com';
+let clientKey = 'e574fee1fb2b443...a8598ca68b7d8';
 
 const altogic = createClient(envUrl, clientKey);
 
