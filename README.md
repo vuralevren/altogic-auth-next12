@@ -17,7 +17,7 @@ After completion of this tutorial, you will learn:
 * How to update user profile info and upload a profile picture
 * And we will integrate Altogic authentication with the email/password method.
 
-If you are new to Nuxt 3 applications, this tutorial is definitely for you to understand the basics and even advanced concepts.
+If you are new to Next applications, this tutorial is definitely for you to understand the basics and even advanced concepts.
 
 
 ## Prerequisites
@@ -25,7 +25,7 @@ If you are new to Nuxt 3 applications, this tutorial is definitely for you to un
 * Familiarity with the command line
 * Any text editor or IDE (WebStorm, VsCode, Sublime, Atom, etc.)
 * Basic knowledge of Javascript
-* Basic knowledge of Nuxt 3
+* Basic knowledge of Next.js
 
 ## Creating an Altogic App
 We will use Altogic as a backend service platform, so let’s visit [Altogic Designer](https://designer.altogic.com/) and create an account.
@@ -61,607 +61,614 @@ Once the user created successfully, our Vue.js app will route the user to the Ve
 ## Quick Tip
 > If you want, you can deactivate or customize the mail verification from **App Settings -> Authentication** in Logic Designer.
 
-## Create a Nuxt 3 project
-Make sure you have an up-to-date version of Node.js installed, then run the following command in your command line
+## Create a Next.js project
 ```bash
-npx nuxi init altogic-auth-nuxt3
+yarn create next-app
 ```
-Open altogic-auth-nuxt3 folder in Visual Studio Code:
-```bash
-code altogic-auth-nuxt3
+
+![Create Next.js](github/11-cli-create.png)
+
+I showed you which options to choose in the image I will give you below. You can choose the same options as I did.
+
+
+## Integrating with Altogic
+Our backend and frontend is now ready and running on the server. ✨
+
+Now, we can install the Altogic client library to our React app to connect our frontend with the backend.
+
+```sh
+# using npm
+npm install altogic
+# OR is using yarn
+yarn add altogic
 ```
-Install the dependencies:
-```bash
-npm install altogic pinia
+
+Let’s create a configs/ folder inside of the src/ directory to add altogic.js file.
+
+Open altogic.js and paste below code block to export the altogic client instance.
+
+/src/configs/altogic.js
+
+```javascript
+import { createClient } from "altogic";
+
+// This `envUrl` and `clientKey` is sample you need to create your own.
+let envUrl = "https://auth.c1-europe.altogic.com";
+let clientKey = "ccf9aab72f47484bba21e1706d61df0c";
+
+const altogic = createClient(envUrl, clientKey);
+
+// We will use this function in server-side.
+export const altogicWithToken = (token) => {
+  altogic.auth.setSession({ token });
+  return altogic;
+};
+
+export default altogic;
 ```
+
+> Replace envUrl and clientKey which is shown in the <strong>Home</strong> view of [Altogic Designer](https://designer.altogic.com/).
 
 ## Create Routes
 
 Nuxt has built-in file system routing. It means that we can create a page by creating a file in the **pages/** directory.
 
 Let's create some views in **pages/** folder as below:
-* index.vue
-* login.vue
-* register.vue
-* profile.vue
-* login-with-magic-link.vue
-* auth-redirect.vue
+* index.js
+* sign-in.js
+* sign-up.js
+* auth-redirect.js
+* magic-link.js
+* profile.js
 
-![Alt text](github/pages.png "vscode preview")
+### Replacing pages/index.js with the following code:
+```javascript
+import Link from "next/link";
 
-### Replacing pages/index.vue with the following code:
-```vue
-<script setup>
-definePageMeta({
-    middleware: ['guest'],
-});
-useHead({
-    title: 'Altogic Auth Sample With Nuxt3',
-});
-</script>
-
-<template>
-    <div class="flex items-center justify-center gap-4 h-screen">
-        <NuxtLink class="border px-4 py-2 font-medium text-xl" to="/login-with-magic-link"
-            >Login With Magic Link</NuxtLink
-        >
-        <NuxtLink class="border px-4 py-2 font-medium text-xl" to="/login">Login</NuxtLink>
-        <NuxtLink class="border px-4 py-2 font-medium text-xl" to="/register">Register</NuxtLink>
+function IndexView() {
+  return (
+    <div className="flex items-center justify-center gap-4 h-screen">
+      <Link class="border px-4 py-2 font-medium text-xl" href="/magic-link">
+        Login With Magic Link
+      </Link>
+      <Link class="border px-4 py-2 font-medium text-xl" href="/sign-in">
+        Sign In
+      </Link>
+      <Link class="border px-4 py-2 font-medium text-xl" href="/sign-up">
+        Sign Up
+      </Link>
     </div>
-</template>
-
+  );
+}
+export default IndexView;
 ```
 
-### Replacing pages/login.vue with the following code:
-```vue
-<script setup lang="ts">
-import { useAuthStore } from '~/stores/useAuth';
+### Replacing pages/sign-in.js with the following code:
+```javascript
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useState } from "react";
 
-const router = useRouter();
-const auth = useAuthStore();
-const email = ref('');
-const password = ref('');
-const errors = ref(null);
-const loading = ref(false);
+function SignInView() {
+  const router = useRouter();
 
-definePageMeta({
-    middleware: ['guest'],
-});
-useHead({
-    title: 'Login',
-});
+  const [inpEmail, setInpEmail] = useState("evrenvural4@gmail.com");
+  const [inpPassword, setInpPassword] = useState("123456789");
 
-async function loginHandler() {
-    loading.value = true;
-    errors.value = null;
-    const { user, errors: apiErrors } = await $fetch('/api/auth/login', {
-        method: 'POST',
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/auth/signIn", {
+        method: "POST",
         body: JSON.stringify({
-            email: email.value,
-            password: password.value,
+          email: inpEmail,
+          password: inpPassword,
         }),
-    });
-    loading.value = false;
-    if (apiErrors) {
-        errors.value = apiErrors;
-    } else {
-        auth.setUser(user);
-        router.push('/profile');
+      });
+
+      if (!response.ok) {
+        const { errors } = await response.json();
+        throw errors;
+      }
+      router.replace("/profile");
+    } catch (err) {
+      setLoading(false);
+      setError(err.items);
     }
-}
-</script>
+  };
 
-<template>
-    <section class="flex flex-col items-center justify-center h-96 gap-4">
-        <form @submit.prevent="loginHandler" class="flex flex-col gap-2 w-full md:w-96">
-            <h1 class="self-start text-3xl font-bold">Login to your account</h1>
+  return (
+    <section className="flex flex-col items-center justify-center h-96 gap-4">
+      <div className="flex flex-col gap-2 w-full md:w-96">
+        <h1 className="self-start text-3xl font-bold">Login to your account</h1>
+        {error?.map(({ message }) => (
+          <div key={message} className="bg-red-600 text-white text-[13px] p-2">
+            <p>{message}</p>
+          </div>
+        ))}
 
-            <div v-if="errors" class="bg-red-600 text-white text-[13px] p-2">
-                <p v-for="(error, index) in errors.items" :key="index">
-                    {{ error.message }}
-                </p>
-            </div>
-
-            <input v-model="email" type="email" placeholder="Type your email" required />
-            <input v-model="password" type="password" placeholder="Type your password" required />
-            <div class="flex justify-between gap-4">
-                <NuxtLink class="text-indigo-600" to="/register">Don't have an account? Register now</NuxtLink>
-                <button
-                    :disabled="loading"
-                    type="submit"
-                    class="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
-                >
-                    Login
-                </button>
-            </div>
-        </form>
+        <input
+          type="email"
+          placeholder="Type your email"
+          onChange={(e) => setInpEmail(e.target.value)}
+          value={inpEmail}
+        />
+        <input
+          autoComplete="new-password"
+          type="password"
+          placeholder="Type your password"
+          onChange={(e) => setInpPassword(e.target.value)}
+          value={inpPassword}
+        />
+        <div className="flex justify-between gap-4">
+          <Link className="text-indigo-600" href="/sign-up">
+            Don't have an account? Register now
+          </Link>
+          <button
+            type="submit"
+            className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
+            disabled={loading}
+            onClick={handleSignIn}
+          >
+            Login
+          </button>
+        </div>
+      </div>
     </section>
-</template>
+  );
+}
+
+export default SignInView;
 ```
 
-### Replacing pages/login-with-magic-link.vue with the following code:
-```vue
-<script setup lang="ts">
-import altogic from '~/libs/altogic';
+### Replacing pages/magic-link.js with the following code:
+```javascript
+import Link from "next/link";
+import { useState } from "react";
+import altogic from "../configs/altogic";
 
-const successMessage = ref('');
-const loading = ref(false);
-const email = ref('');
-const errors = ref(null);
+function MagicLinkView() {
+  const [inpEmail, setInpEmail] = useState("");
 
-definePageMeta({
-    middleware: ['guest'],
-});
-useHead({
-    title: 'Login with magic link',
-});
+  const [success, setSuccess] = useState("");
+  const [errors, setErrors] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-async function loginHandler() {
-    loading.value = true;
-    errors.value = null;
-    const { errors: apiErrors } = await altogic.auth.sendMagicLinkEmail(email.value);
-    loading.value = false;
+  async function loginHandler() {
+    setLoading(true);
+    setErrors(null);
+
+    const { errors: apiErrors } = await altogic.auth.sendMagicLinkEmail(
+      inpEmail
+    );
+    setLoading(false);
+
     if (apiErrors) {
-        errors.value = apiErrors;
+      setErrors(apiErrors.items);
     } else {
-        email.value = '';
-        successMessage.value = 'Email sent! Check your inbox.';
+      setInpEmail("");
+      setSuccess("Email sent! Check your inbox.");
     }
-}
-</script>
+  }
 
-<template>
-    <section class="flex flex-col items-center justify-center h-96 gap-4">
-        <form @submit.prevent="loginHandler" class="flex flex-col gap-2 w-full md:w-96">
-            <h1 class="self-start text-3xl font-bold">Login with magic link</h1>
+  return (
+    <section className="flex flex-col items-center justify-center h-96 gap-4">
+      <div className="flex flex-col gap-2 w-full md:w-96">
+        <h1 className="self-start text-3xl font-bold">Login with magic link</h1>
+        {success && (
+          <div className="bg-green-600 text-white text-[13px] p-2">
+            {success}
+          </div>
+        )}
+        {errors && (
+          <div className="bg-red-600 text-white text-[13px] p-2">
+            {errors.map(({ message }) => (
+              <p key={message}>{message}</p>
+            ))}
+          </div>
+        )}
 
-            <div v-if="successMessage" class="bg-green-600 text-white text-[13px] p-2">
-                {{ successMessage }}
-            </div>
-
-            <div v-if="errors" class="bg-red-600 text-white text-[13px] p-2">
-                <p v-for="(error, index) in errors.items" :key="index">
-                    {{ error.message }}
-                </p>
-            </div>
-
-            <input v-model="email" type="email" placeholder="Type your email" required />
-            <div class="flex justify-between gap-4">
-                <NuxtLink class="text-indigo-600" to="/register">Don't have an account? Register now</NuxtLink>
-                <button
-                    :disabled="loading"
-                    type="submit"
-                    class="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
-                >
-                    Send magic link
-                </button>
-            </div>
-        </form>
+        <input
+          type="email"
+          placeholder="Type your email"
+          onChange={(e) => setInpEmail(e.target.value)}
+          value={inpEmail}
+        />
+        <div className="flex justify-between gap-4">
+          <Link class="text-indigo-600" href="/sign-up">
+            Don't have an account? Register now
+          </Link>
+          <button
+            disabled={loading}
+            type="submit"
+            className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
+            onClick={loginHandler}
+          >
+            Send magic link
+          </button>
+        </div>
+      </div>
     </section>
-</template>
+  );
+}
+
+export default MagicLinkView;
 ```
 
-### Replacing pages/register.vue with the following code:
-```vue
-<script setup lang="ts">
-import { useAuthStore } from '~/stores/useAuth';
+### Replacing pages/sign-up.js with the following code:
+```javascript
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
-const auth = useAuthStore();
-const router = useRouter();
+function SignUpView() {
+  const router = useRouter();
 
-const email = ref('');
-const name = ref('');
-const password = ref('');
-const errors = ref(null);
-const isNeedToVerify = ref(false);
-const loading = ref(false);
+  const [inpName, setInpName] = useState("");
+  const [inpEmail, setInpEmail] = useState("");
+  const [inpPassword, setInpPassword] = useState("");
 
-definePageMeta({
-    middleware: ['guest'],
-});
-useHead({
-    title: 'Register',
-});
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState(null);
 
-async function registerHandler() {
-    loading.value = true;
-    errors.value = null;
-    const {
-        user,
-        errors: apiErrors,
-        session,
-    } = await $fetch('/api/auth/register', {
-        method: 'POST',
+  const handleSignUp = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/auth/signUp", {
+        method: "POST",
         body: JSON.stringify({
-            email: email.value,
-            password: password.value,
-            name: name.value,
+          name: inpName,
+          email: inpEmail,
+          password: inpPassword,
         }),
-    });
-    if (apiErrors) {
-        errors.value = apiErrors;
-        return;
+      });
+      const { session, errors } = await response.json();
+
+      if (!response.ok) {
+        throw errors;
+      }
+
+      if (session) {
+        router.replace("/profile");
+      } else {
+        setSuccess(`We sent a verification link to ${inpEmail}`);
+        setError(null);
+        setLoading(false);
+      }
+    } catch (err) {
+      setSuccess(null);
+      setError(err.items);
+      setLoading(false);
     }
-    email.value = '';
-    password.value = '';
-    name.value = '';
+  };
 
-    if (!session) {
-        isNeedToVerify.value = true;
-        return;
-    }
+  return (
+    <section className="flex flex-col items-center justify-center h-96 gap-4">
+      <div className="flex flex-col gap-2 w-full md:w-96">
+        <h1 className="self-start text-3xl font-bold">Create an account</h1>
+        {success && (
+          <div className="bg-green-500 text-white p-2">{success}</div>
+        )}
+        {error?.map(({ message }) => (
+          <div key={message} className="bg-red-600 text-white text-[13px] p-2">
+            <p>{message}</p>
+          </div>
+        ))}
 
-    auth.setUser(user);
-    router.push({ name: 'profile' });
-}
-</script>
-
-<template>
-    <section class="flex flex-col items-center justify-center h-96 gap-4">
-        <form @submit.prevent="registerHandler" class="flex flex-col gap-2 w-full md:w-96">
-            <h1 class="self-start text-3xl font-bold">Create an account</h1>
-
-            <div v-if="isNeedToVerify" class="bg-green-500 text-white p-2">
-                Your account has been created. Please check your email to verify your account.
-            </div>
-
-            <div v-if="errors" class="bg-red-600 text-white text-[13px] p-2">
-                <p v-for="(error, index) in errors.items" :key="index">
-                    {{ error.message }}
-                </p>
-            </div>
-
-            <input v-model="email" type="email" placeholder="Type your email" required />
-            <input v-model="name" type="text" placeholder="Type your name" required />
-            <input
-                v-model="password"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Type your password"
-                required
-            />
-            <div class="flex justify-between gap-4">
-                <NuxtLink class="text-indigo-600" to="/login">Already have an account?</NuxtLink>
-                <button
-                    type="submit"
-                    :disabled="loading"
-                    class="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
-                >
-                    Register
-                </button>
-            </div>
-        </form>
-    </section>
-</template>
-```
-
-### Replacing pages/profile.vue with the following code:
-```vue
-<script setup>
-import { useAuthStore } from '~/stores/useAuth';
-const auth = useAuthStore();
-
-definePageMeta({
-    middleware: ['auth'],
-});
-
-useHead({
-    title: `${auth.user.name} - Profile`,
-});
-</script>
-
-<template>
-    <section class="h-screen py-4 space-y-4 flex flex-col text-center items-center">
-        <h1 class="text-3xl">Hello, {{ auth.user.name }}</h1>
-        <a href="/api/auth/logout" class="bg-gray-400 rounded py-2 px-3 text-white"> Logout </a>
-    </section>
-</template>
-```
-
-### Replacing pages/auth-redirect.vue with the following code:
-```vue
-<script setup>
-const auth = useAuthStore();
-const route = useRoute();
-const router = useRouter();
-const errors = ref(null);
-const { access_token } = route.query;
-
-useHead({
-    title: 'Verify your account',
-});
-
-onMounted(async () => {
-    const { errors: apiErrors, user } = await $fetch(`/api/auth/verify-user?access_token=${access_token}`);
-    if (apiErrors) {
-        errors.value = apiErrors;
-        return;
-    }
-    auth.setUser(user);
-    await router.push('/profile');
-});
-</script>
-
-<template>
-    <section class="h-screen flex flex-col gap-4 justify-center items-center">
-        <div class="text-center" v-if="errors">
-            <p class="text-red-500 text-3xl" :key="index" v-for="(error, index) in errors.items">
-                {{ error.message }}
-            </p>
+        <input
+          type="text"
+          placeholder="Type your name"
+          onChange={(e) => setInpName(e.target.value)}
+          value={inpName}
+        />
+        <input
+          type="email"
+          placeholder="Type your email"
+          onChange={(e) => setInpEmail(e.target.value)}
+          value={inpEmail}
+        />
+        <input
+          autoComplete="new-password"
+          type="password"
+          placeholder="Type your password"
+          onChange={(e) => setInpPassword(e.target.value)}
+          value={inpPassword}
+        />
+        <div className="flex justify-between gap-4">
+          <Link className="text-indigo-600" href="/sign-in">
+            Already have an account?
+          </Link>
+          <button
+            type="submit"
+            className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
+            disabled={loading}
+            onClick={handleSignUp}
+          >
+            Register
+          </button>
         </div>
-        <div class="text-center" v-else>
-            <p class="text-6xl text-black">Please wait</p>
-            <p class="text-3xl text-black">You're redirecting to your profile...</p>
-        </div>
+      </div>
     </section>
-</template>
-```
-
-
-## Let's create an Altogic Client instance
-Create a folder named **libs** in your project root directory and put a file named **altogic.js** in it. Then paste the code below into the file.
-```js
-// libs/altogic.js
-import { createClient } from 'altogic';
-
-const ENV_URL = ""; // replace with your envUrl
-const CLIENT_KEY = ""; // replace with your clientKey
-const API_KEY = ""; // replace with your apiKey
-
-const altogic = createClient(ENV_URL, CLIENT_KEY, {
-	apiKey: API_KEY,
-});
-
-export default altogic;
-```
-
-## Let's create authentication store
-Create a folder named **stores** in your project root folder and put a file named **useAuth.js** in it. Then paste the code below into the file.
-```js
-// stores/useAuth.js
-export const useAuthStore = defineStore('AuthStore', () => {
-	const user = ref(null);
-	const setUser = (_user) => (user.value = _user);
-	return {
-		user,
-		setUser,
-	};
-});
-
-if (import.meta.hot) {
-	import.meta.hot.accept(acceptHMRUpdate(useAuthStore, import.meta.hot));
+  );
 }
+
+export default SignUpView;
+```
+
+### Replacing pages/profile.js with the following code:
+```javascript
+import { useRouter } from "next/router";
+import { useState } from "react";
+import Avatar from "../components/Avatar";
+import Sessions from "../components/Sessions";
+import UserInfo from "../components/UserInfo";
+import altogic from "../configs/altogic";
+
+function ProfileView({ userProp, sessionsProp }) {
+  const router = useRouter();
+
+  const [user, setUser] = useState(userProp);
+  const [sessions, setSessions] = useState(sessionsProp);
+
+  const handleSignOut = async () => {
+    try {
+      const response = await fetch("/api/auth/signOut", {
+        method: "POST",
+      });
+      const { errors } = await response.json();
+
+      if (!response.ok) {
+        throw errors;
+      }
+      router.push("sign-in");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <section className="h-screen py-4 space-y-4 flex flex-col text-center items-center">
+      <Avatar user={user} setUser={setUser} />
+      <UserInfo user={user} setUser={setUser} />
+      <Sessions sessions={sessions} setSessions={setSessions} />
+      <button
+        className="bg-gray-400 rounded py-2 px-3 text-white"
+        onClick={handleSignOut}
+      >
+        Sign Out
+      </button>
+    </section>
+  );
+}
+
+export async function getServerSideProps(context) {
+  const token = context.req.cookies.session_token;
+  const { user, errors } = await altogic.auth.getUserFromDBbyCookie(
+    context.req,
+    context.res
+  );
+
+  if (!user) {
+    return {
+      redirect: {
+        destination: "/sign-in",
+        permanent: false,
+      },
+    };
+  }
+
+  const { sessions } = await altogic.auth.getAllSessions();
+  const sessionsProp = sessions.map((session) =>
+    session.token === token ? { ...session, isCurrent: true } : session
+  );
+  return {
+    props: { userProp: user, sessionsProp },
+  };
+}
+
+export default ProfileView;
+
+```
+
+### Replacing pages/auth-redirect.js with the following code:
+```javascript
+import Link from "next/link";
+import { useRouter } from "next/router";
+import altogic from "../configs/altogic";
+
+function AuthRedirectView() {
+  return (
+    <div>
+      <div>Redirecting...</div>
+    </div>
+  );
+}
+
+export async function getServerSideProps(context) {
+  const { access_token } = context.query;
+  const { user, session } = await altogic.auth.getAuthGrant(access_token);
+
+  if (user) {
+    altogic.auth.setSessionCookie(session.token, context.req, context.res);
+    altogic.auth.setSession(session);
+
+    return {
+      redirect: {
+        destination: "/profile",
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    redirect: {
+      destination: "/sign-in",
+      permanent: false,
+    },
+  };
+}
+
+export default AuthRedirectView;
+
 ```
 
 # Let's get to the most important point
-Nuxt is a server side rendering tool, we will do some operations on the backend. So we need to create a folder named **server** in our project root directory.
+Next is a server side rendering tool, we will do some operations on the backend. So we need to create a folder named **api** in pages directory.
 
 
-## Let's create a server folder
-Create a folder named **server** in your project root directory.
+## Let's create a api folder
+Create a folder named **auth** in pages/api.
 
-And create files in server folder like image in below
-![Application](github/server-folder.png)
+And create files in api folder like image in below
+![Application](github/12-foldering.png)
 
-### Replacing server/api/login.post.js with the following code:
+### Replacing pages/api/signIn.js with the following code:
 In this file, we have created an endpoint for users to login. And here we are logging in by assigning the session token returned from altogic to the cookie.
 ```js
-import altogic from '~/libs/altogic';
+import altogic from "../../../configs/altogic";
 
-export default defineEventHandler(async (event) => {
-	const { email, password } = await readBody(event);
-	const { user, session, errors } = await altogic.auth.signInWithEmail(email, password);
+export default async function handler(req, res) {
+  const { email, password } = JSON.parse(req.body);
 
-	if (errors) {
-		return { errors };
-	}
+  const { user, session, errors } = await altogic.auth.signInWithEmail(
+    email,
+    password
+  );
 
-	altogic.auth.setSessionCookie(session.token, event.req, event.res);
-	return { user, session };
-});
+  if (errors) {
+    res.status(errors.status).json({ errors });
+  } else {
+    altogic.auth.setSessionCookie(session.token, req, res);
+    altogic.auth.setSession(session);
+    res.status(200).json({ user, session });
+  }
+}
 ```
 
-### Replacing server/api/register.post.js with the following code:
+### Replacing pages/api/signUp.js with the following code:
 ```js
-import altogic from '~/libs/altogic';
+import altogic from "../../../configs/altogic";
 
-export default defineEventHandler(async (event) => {
-	const { email, password, ...rest } = await readBody(event);
-	const { user, errors, session } = await altogic.auth.signUpWithEmail(email, password, rest);
+export default async function handler(req, res) {
+  const { name, email, password } = JSON.parse(req.body);
 
-	if (errors) {
-		return { errors };
-	}
+  const { user, session, errors } = await altogic.auth.signUpWithEmail(
+    email,
+    password,
+    name
+  );
 
-	if (session) {
-		altogic.auth.setSessionCookie(session.token, event.req, event.res);
-		return { user, session };
-	}
-
-	return { user };
-});
+  if (errors) {
+    res.status(errors.status).json({ errors });
+  } else {
+    if (session) {
+      altogic.auth.setSessionCookie(session.token, req, res);
+      altogic.auth.setSession(session);
+    }
+    res.status(200).json({ user, session });
+  }
+}
 ```
 
-### Replacing server/api/logout.js with the following code:
+### Replacing pages/api/signOut.js with the following code:
 ```js
-import altogic from '~/libs/altogic';
+import { altogicWithToken } from "../../../configs/altogic";
 
-export default defineEventHandler(async (event) => {
-	const token = getCookie(event, 'session_token');
-	await altogic.auth.signOut(token);
-	deleteCookie(event, 'session_token');
-	await sendRedirect(event, '/login');
-});
+export default async function handler(req, res) {
+  const token = req.cookies.session_token;
+  const { errors } = await altogicWithToken(token).auth.signOut();
+  res.removeHeader("session_token");
+
+  if (errors) {
+    res.status(errors.status).json({ errors });
+  } else {
+    res.status(200).json({ data: true });
+  }
+}
 ```
 
-### Replacing server/api/verify-user.js with the following code:
-```js
-import altogic from '~/libs/altogic';
-
-export default defineEventHandler(async (event) => {
-	const { access_token } = getQuery(event);
-
-	const { errors, user, session } = await altogic.auth.getAuthGrant(access_token.toString());
-
-	if (errors) {
-		return { errors };
-	}
-
-	altogic.auth.setSessionCookie(session.token, event.req, event.res);
-	return { user };
-});
-```
-
-### Replacing server/middleware/auth.js with the following code:
-In this file, we pull the user from altogic with the token in the cookie according to the login status of the user.
-```js
-import altogic from '~/libs/altogic';
-
-export default defineEventHandler(async (event) => {
-	const { user } = await altogic.auth.getUserFromDBbyCookie(event.req, event.res);
-	if (user) event.context.user = user;
-});
-```
-
-## Create Middleware Folder
-Create a folder named **middleware** in your project root directory.
-
-And create files in middleware folder like image in below
-![Application](github/middleware.png)
-
-### Replacing middleware/auth.global.js with the following code:
-In this file, we update our state by checking the variable that we have previously assigned in auth.js, which is the server middleware.
-```js
-import { useAuthStore } from '~/stores/useAuth';
-
-export default defineNuxtRouteMiddleware(() => {
-	const store = useAuthStore();
-	const event = useRequestEvent();
-
-	if (process.server && event.context.user) {
-		store.setUser(event.context.user);
-	}
-});
-```
-
-### Replacing middleware/auth.js with the following code:
-The middleware we created for our protected routes
-```js
-import { useAuthStore } from '~/stores/useAuth';
-
-export default defineNuxtRouteMiddleware(() => {
-	const cookie = useCookie('session_token');
-	const store = useAuthStore();
-
-	if (!cookie.value && !store.user) return '/login';
-});
-```
-
-### Replacing middleware/guest.js with the following code:
-The middleware we created for our unprotected routes
-```js
-import { useAuthStore } from '~/stores/useAuth';
-
-export default defineNuxtRouteMiddleware(() => {
-	const cookie = useCookie('session_token');
-	const store = useAuthStore();
-
-	if (cookie.value || store.user) return '/profile';
-});
-```
-
-
-## Upload Profile Photo
+## Bonus: Upload Profile Photo
 Let's create a Vue component for user can upload a profile photo. Create a folder named **components** in your project root directory.
 
-```vue
-<!-- components/Avatar.vue -->
-<script setup>
-import altogic from '~/libs/altogic';
+```javascript
+// components/Avatar.js
+import { useState } from "react";
+import altogic from "../configs/altogic";
 
-const auth = useAuthStore();
-const loading = ref(false);
-const errors = ref(null);
+function Avatar({ user, setUser }) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState(null);
 
-const userPicture = computed(() => {
-	return auth.user.profilePicture || `https://ui-avatars.com/api/?name=${auth.user.name}&background=0D8ABC&color=fff`;
-});
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = null;
+    if (!file) return;
+    try {
+      setLoading(true);
+      setErrors(null);
+      const { publicPath } = await updateProfilePicture(file);
+      const updatedUser = await updateUser({ profilePicture: publicPath });
+      setUser(updatedUser);
+    } catch (e) {
+      setErrors(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const updateProfilePicture = async (file) => {
+    const { data, errors } = await altogic.storage
+      .bucket("root")
+      .upload(file.name, file);
+    if (errors) throw new Error("Couldn't upload file");
+    return data;
+  };
+  const updateUser = async (data) => {
+    const { data: updatedUser, errors } = await altogic.db
+      .model("users")
+      .object(user._id)
+      .update(data);
+    if (errors) throw new Error("Couldn't update user");
+    return updatedUser;
+  };
 
-async function changeHandler(e) {
-	const file = e.target.files[0];
-	e.target.value = null;
-	if (!file) return;
-	try {
-		loading.value = true;
-		errors.value = null;
-		const { publicPath } = await updateProfilePicture(file);
-		const user = await updateUser({ profilePicture: publicPath });
-		auth.setUser(user);
-	} catch (e) {
-		errors.value = e.message;
-	} finally {
-		loading.value = false;
-	}
+  return (
+    <div>
+      <figure className="flex flex-col gap-4 items-center justify-center py-2">
+        <picture className="border rounded-full w-24 h-24 overflow-hidden">
+          <img
+            className="object-cover w-full h-full"
+            src={
+              user?.profilePicture ||
+              `https://ui-avatars.com/api/?name=${user?.name}&background=0D8ABC&color=fff`
+            }
+            alt={user?.name}
+          />
+        </picture>
+      </figure>
+      <div className="flex flex-col gap-4 justify-center items-center">
+        <label className="border p-2 cursor-pointer">
+          <span>{loading ? "Uploading..." : "Change Avatar"}</span>
+
+          <input
+            disabled={loading}
+            className="hidden"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+          />
+        </label>
+        {errors && <div className="bg-red-500 p-2 text-white">{errors}</div>}
+      </div>
+    </div>
+  );
 }
 
-async function updateProfilePicture(file) {
-	const { data, errors } = await altogic.storage.bucket('root').upload(file.name, file);
-	if (errors) throw new Error("Couldn't upload file");
-	return data;
-}
-
-async function updateUser(data) {
-	const { data: user, errors } = await altogic.db.model('users').object(auth.user._id).update(data);
-	if (errors) throw new Error("Couldn't update user");
-	return user;
-}
-</script>
-
-<template>
-	<div>
-		<figure class="flex flex-col gap-4 items-center justify-center py-2">
-			<picture class="border rounded-full w-24 h-24 overflow-hidden">
-				<img class="object-cover w-full h-full" :src="userPicture" :alt="auth.user.name" />
-			</picture>
-		</figure>
-		<div class="flex flex-col gap-4 justify-center items-center">
-			<label class="border p-2 cursor-pointer">
-				<span v-if="loading">Uploading...</span>
-				<span v-else>Change Avatar</span>
-				<input :disabled="loading" class="hidden" type="file" accept="image/*" @change="changeHandler" />
-			</label>
-			<div class="bg-red-500 p-2 text-white" v-if="errors">
-				{{ errors }}
-			</div>
-		</div>
-	</div>
-</template>
+export default Avatar;
 ```
-
-## Use the Avatar component on the profile page
-```vue
-<script setup>
-import { useAuthStore } from '~/stores/useAuth';
-const auth = useAuthStore();
-
-definePageMeta({
-    middleware: ['auth'],
-});
-
-useHead({
-    title: `${auth.user.name} - Profile`,
-});
-</script>
-
-<template>
-    <section class="h-screen py-4 space-y-4 flex flex-col text-center items-center">
-        <Avatar />
-        <h1 class="text-3xl">Hello, {{ auth.user.name }}</h1>
-        <a href="/api/auth/logout" class="bg-gray-400 rounded py-2 px-3 text-white"> Logout </a>
-    </section>
-</template>
-```
-
 
 ## Conclusion
 Congratulations!✨

@@ -31,7 +31,7 @@ function SignUpView() {
       }
 
       if (session) {
-        router.replace("/");
+        router.replace("/profile");
       } else {
         setSuccess(`We sent a verification link to ${inpEmail}`);
         setError(null);

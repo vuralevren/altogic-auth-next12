@@ -20,7 +20,7 @@ export async function getServerSideProps(context) {
 
     return {
       redirect: {
-        destination: "/",
+        destination: "/profile",
         permanent: false,
       },
     };

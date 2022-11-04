@@ -1,7 +1,6 @@
-import { useState } from "react";
 import Link from "next/link";
-import altogic from "../configs/altogic";
 import { useRouter } from "next/router";
+import { useState } from "react";
 
 function SignInView() {
   const router = useRouter();
@@ -27,7 +26,7 @@ function SignInView() {
         const { errors } = await response.json();
         throw errors;
       }
-      router.replace("/");
+      router.replace("/profile");
     } catch (err) {
       setLoading(false);
       setError(err.items);

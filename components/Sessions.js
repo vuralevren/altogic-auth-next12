@@ -7,6 +7,7 @@ function Sessions({ sessions, setSessions }) {
       setSessions(sessions.filter((s) => s.token !== session.token));
     }
   };
+
   return (
     <div className="border p-4 space-y-4">
       <p className="text-3xl">All Sessions</p>

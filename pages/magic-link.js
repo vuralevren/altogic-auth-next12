@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 import altogic from "../configs/altogic";
 
-function MagicLink() {
+function MagicLinkView() {
   const [inpEmail, setInpEmail] = useState("");
 
   const [success, setSuccess] = useState("");
@@ -67,4 +67,4 @@ function MagicLink() {
   );
 }
 
-export default MagicLink;
+export default MagicLinkView;
