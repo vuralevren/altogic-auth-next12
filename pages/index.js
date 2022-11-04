@@ -1,67 +1,72 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import withPrivateRoute from "../components/withPrivateRoute";
 import altogic from "../configs/altogic";
-import { useAuthContext } from "../contexts/Auth.context";
+import Image from "next/image";
+import { useState } from "react";
+import Avatar from "../components/Avatar";
+import UserInfo from "../components/UserInfo";
+import Sessions from "../components/Sessions";
 
-function HomeView() {
+function HomeView({ userProp, sessionsProp }) {
   const router = useRouter();
-  const [auth, setAuth] = useAuthContext();
+
+  const [user, setUser] = useState(userProp);
+  const [sessions, setSessions] = useState(sessionsProp);
 
   const handleSignOut = async () => {
-    await altogic.auth.signOut();
-    setAuth(null);
-    router.push("sign-in");
+    try {
+      const response = await fetch("/api/auth/signOut", {
+        method: "POST",
+      });
+      const { errors } = await response.json();
+
+      if (!response.ok) {
+        throw errors;
+      }
+      router.push("sign-in");
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
-    <div style={styles.body}>
-      <div>{auth && JSON.stringify(auth, null, 3)}</div>
-      <button style={styles.button} onClick={handleSignOut}>
+    <section className="h-screen py-4 space-y-4 flex flex-col text-center items-center">
+      <Avatar user={user} setUser={setUser} />
+      <UserInfo user={user} setUser={setUser} />
+      <Sessions sessions={sessions} setSessions={setSessions} />
+      <button
+        className="bg-gray-400 rounded py-2 px-3 text-white"
+        onClick={handleSignOut}
+      >
         Sign Out
       </button>
-    </div>
+    </section>
   );
 }
 
-const styles = {
-  body: {
-    display: "flex",
-    flexDirection: "column",
-    padding: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  container: {
-    display: "flex",
-    alignItems: "center",
-  },
-  input: {
-    width: 350,
-    height: 55,
-    margin: 10,
-    padding: 8,
-    borderRadius: 14,
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  button: {
-    width: 150,
-    height: 55,
-    borderRadius: 14,
-    color: "white",
-    backgroundColor: "blue",
-  },
-  successLabel: {
-    color: "green",
-    marginTop: 12,
-  },
-  link: {
-    color: "blue",
-  },
-  label: {
-    marginTop: 12,
-  },
-};
+export async function getServerSideProps(context) {
+  const token = context.req.cookies.session_token;
+  const { user, errors } = await altogic.auth.getUserFromDBbyCookie(
+    context.req,
+    context.res
+  );
 
-export default withPrivateRoute(HomeView);
+  if (!user) {
+    return {
+      redirect: {
+        destination: "/sign-in",
+        permanent: false,
+      },
+    };
+  }
+
+  const { sessions } = await altogic.auth.getAllSessions();
+  const sessionsProp = sessions.map((session) =>
+    session.token === token ? { ...session, isCurrent: true } : session
+  );
+  return {
+    props: { userProp: user, sessionsProp },
+  };
+}
+
+export default HomeView;

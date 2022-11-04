@@ -2,106 +2,77 @@ import { useState } from "react";
 import Link from "next/link";
 import altogic from "../configs/altogic";
 import { useRouter } from "next/router";
-import { useAuthContext } from "../contexts/Auth.context";
 
 function SignInView() {
   const router = useRouter();
-  const [auth, setAuth] = useAuthContext();
 
-  const [inpEmail, setInpEmail] = useState("");
-  const [inpPassword, setInpPassword] = useState("");
+  const [inpEmail, setInpEmail] = useState("evrenvural4@gmail.com");
+  const [inpPassword, setInpPassword] = useState("123456789");
 
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
     try {
-      const { user, errors } = await altogic.auth.signInWithEmail(
-        inpEmail,
-        inpPassword
-      );
+      setLoading(true);
+      const response = await fetch("/api/auth/signIn", {
+        method: "POST",
+        body: JSON.stringify({
+          email: inpEmail,
+          password: inpPassword,
+        }),
+      });
 
-      if (errors) {
+      if (!response.ok) {
+        const { errors } = await response.json();
         throw errors;
       }
-
-      setAuth(user);
-      router.push("/", undefined, { shallow: true });
+      router.replace("/");
     } catch (err) {
-      setError(err);
+      setLoading(false);
+      setError(err.items);
     }
   };
 
   return (
-    <div style={styles.body}>
-      <div style={styles.container}>
+    <section className="flex flex-col items-center justify-center h-96 gap-4">
+      <div className="flex flex-col gap-2 w-full md:w-96">
+        <h1 className="self-start text-3xl font-bold">Login to your account</h1>
+        {error?.map(({ message }) => (
+          <div key={message} className="bg-red-600 text-white text-[13px] p-2">
+            <p>{message}</p>
+          </div>
+        ))}
+
         <input
-          style={styles.input}
-          placeholder="Email"
-          autoCapitalize="none"
+          type="email"
+          placeholder="Type your email"
           onChange={(e) => setInpEmail(e.target.value)}
           value={inpEmail}
         />
         <input
-          style={styles.input}
+          autoComplete="new-password"
           type="password"
-          placeholder="Password"
-          autoCapitalize="none"
+          placeholder="Type your password"
           onChange={(e) => setInpPassword(e.target.value)}
           value={inpPassword}
         />
-        <button style={styles.button} onClick={handleSignIn}>
-          Sign In
-        </button>
+        <div className="flex justify-between gap-4">
+          <Link className="text-indigo-600" href="/sign-up">
+            Don't have an account? Register now
+          </Link>
+          <button
+            type="submit"
+            className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
+            disabled={loading}
+            onClick={handleSignIn}
+          >
+            Login
+          </button>
+        </div>
       </div>
-      <label style={styles.alreadyLabel}>
-        Dont have an account yet?{" "}
-        <Link href="/sign-up">
-          <label style={styles.link}>Create an account</label>
-        </Link>
-      </label>
-      <div>{error && JSON.stringify(error, null, 3)}</div>
-    </div>
+    </section>
   );
 }
-
-const styles = {
-  body: {
-    display: "flex",
-    flexDirection: "column",
-    padding: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  container: {
-    display: "flex",
-    alignItems: "center",
-  },
-  input: {
-    width: 350,
-    height: 55,
-    margin: 10,
-    padding: 8,
-    borderRadius: 14,
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  button: {
-    width: 150,
-    height: 55,
-    borderRadius: 14,
-    color: "white",
-    backgroundColor: "blue",
-  },
-  successLabel: {
-    color: "green",
-    marginTop: 12,
-  },
-  link: {
-    color: "blue",
-  },
-  label: {
-    marginTop: 12,
-  },
-};
 
 export default SignInView;

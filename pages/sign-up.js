@@ -1,106 +1,97 @@
 import { useState } from "react";
 import Link from "next/link";
-import altogic from "../configs/altogic";
+import { useRouter } from "next/router";
 
 function SignUpView() {
+  const router = useRouter();
+
+  const [inpName, setInpName] = useState("");
   const [inpEmail, setInpEmail] = useState("");
   const [inpPassword, setInpPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState(null);
 
   const handleSignUp = async () => {
     try {
-      const { user, session, errors } = await altogic.auth.signUpWithEmail(
-        inpEmail,
-        inpPassword
-      );
-      if (errors) {
+      setLoading(true);
+      const response = await fetch("/api/auth/signUp", {
+        method: "POST",
+        body: JSON.stringify({
+          name: inpName,
+          email: inpEmail,
+          password: inpPassword,
+        }),
+      });
+      const { session, errors } = await response.json();
+
+      if (!response.ok) {
         throw errors;
       }
-      console.log({ user, session });
-      altogic.auth.setSessionCookie(session.token);
-      const buNe = altogic.auth.getUserFromDBbyCookie();
-      console.log(buNe);
-      setSuccess(`We sent a verification link to ${inpEmail}`);
+
+      if (session) {
+        router.replace("/");
+      } else {
+        setSuccess(`We sent a verification link to ${inpEmail}`);
+        setError(null);
+        setLoading(false);
+      }
     } catch (err) {
-      console.error(err);
-      setError(err);
+      setSuccess(null);
+      setError(err.items);
+      setLoading(false);
     }
   };
 
   return (
-    <div style={styles.body}>
-      <div style={styles.container}>
+    <section className="flex flex-col items-center justify-center h-96 gap-4">
+      <div className="flex flex-col gap-2 w-full md:w-96">
+        <h1 className="self-start text-3xl font-bold">Create an account</h1>
+        {success && (
+          <div className="bg-green-500 text-white p-2">{success}</div>
+        )}
+        {error?.map(({ message }) => (
+          <div key={message} className="bg-red-600 text-white text-[13px] p-2">
+            <p>{message}</p>
+          </div>
+        ))}
+
         <input
-          style={styles.input}
-          placeholder="Email"
-          autoCapitalize="none"
+          type="text"
+          placeholder="Type your name"
+          onChange={(e) => setInpName(e.target.value)}
+          value={inpName}
+        />
+        <input
+          type="email"
+          placeholder="Type your email"
           onChange={(e) => setInpEmail(e.target.value)}
           value={inpEmail}
         />
         <input
-          style={styles.input}
+          autoComplete="new-password"
           type="password"
-          placeholder="Password"
-          autoCapitalize="none"
+          placeholder="Type your password"
           onChange={(e) => setInpPassword(e.target.value)}
           value={inpPassword}
         />
-        <button style={styles.button} onClick={handleSignUp}>
-          Sign Up
-        </button>
+        <div className="flex justify-between gap-4">
+          <Link className="text-indigo-600" href="/sign-in">
+            Already have an account?
+          </Link>
+          <button
+            type="submit"
+            className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
+            disabled={loading}
+            onClick={handleSignUp}
+          >
+            Register
+          </button>
+        </div>
       </div>
-      <label style={styles.alreadyLabel}>
-        Already have an account?{" "}
-        <Link href="/sign-in">
-          <label style={styles.link}>Login</label>
-        </Link>
-      </label>
-      <div style={styles.successLabel}>{success && success}</div>
-      <div>{error && JSON.stringify(error, null, 3)}</div>
-    </div>
+    </section>
   );
 }
-
-const styles = {
-  body: {
-    display: "flex",
-    flexDirection: "column",
-    padding: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  container: {
-    display: "flex",
-    alignItems: "center",
-  },
-  input: {
-    width: 350,
-    height: 55,
-    margin: 10,
-    padding: 8,
-    borderRadius: 14,
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  button: {
-    width: 150,
-    height: 55,
-    borderRadius: 14,
-    color: "white",
-    backgroundColor: "blue",
-  },
-  successLabel: {
-    color: "green",
-    marginTop: 12,
-  },
-  link: {
-    color: "blue",
-  },
-  label: {
-    marginTop: 12,
-  },
-};
 
 export default SignUpView;

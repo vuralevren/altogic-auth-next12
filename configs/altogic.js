@@ -6,4 +6,9 @@ let clientKey = "ccf9aab72f47484bba21e1706d61df0c";
 
 const altogic = createClient(envUrl, clientKey);
 
+export const altogicWithToken = (token) => {
+  altogic.auth.setSession({ token });
+  return altogic;
+};
+
 export default altogic;
