@@ -152,8 +152,8 @@ import { useState } from "react";
 function SignInView() {
   const router = useRouter();
 
-  const [inpEmail, setInpEmail] = useState("evrenvural4@gmail.com");
-  const [inpPassword, setInpPassword] = useState("123456789");
+  const [inpEmail, setInpEmail] = useState("");
+  const [inpPassword, setInpPassword] = useState("");
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
