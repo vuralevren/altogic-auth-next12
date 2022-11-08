@@ -362,7 +362,7 @@ Replacing pages/profile.js with the following code:
 ```javascript
 // /pages/profile.js
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Avatar from "../components/Avatar";
 import Sessions from "../components/Sessions";
 import UserInfo from "../components/UserInfo";
@@ -384,11 +384,20 @@ function ProfileView({ userProp, sessionsProp }) {
       if (!response.ok) {
         throw errors;
       }
+      altogic.auth.clearLocalData();
       router.push("sign-in");
     } catch (err) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    if (userProp && sessionsProp) {
+      const currentSession = sessionsProp.find((s) => s.isCurrent);
+      altogic.auth.setUser(userProp);
+      altogic.auth.setSession(currentSession);
+    }
+  }, []);
 
   return (
     <section className="h-screen py-4 space-y-4 flex flex-col text-center items-center">
@@ -426,7 +435,7 @@ export async function getServerSideProps(context) {
     session.token === token ? { ...session, isCurrent: true } : session
   );
   return {
-    props: { userProp: user, sessionsProp },
+    props: { userProp: user, sessionsProp, token },
   };
 }
 
@@ -719,11 +728,11 @@ export default UserInfo;
 Replacing components/Sessions.js with the following code:
 ```js
 // components/Sessions.js
-import { altogic, altogicWithToken } from "../configs/altogic";
+import altogic from "../configs/altogic";
 
 function Sessions({ sessions, setSessions }) {
   const logoutSession = async (session) => {
-    const { errors } = await altogicWithToken(session.token).auth.signOut();
+    const { errors } = await altogic.auth.signOut(session.token);
     if (!errors) {
       setSessions(sessions.filter((s) => s.token !== session.token));
     }

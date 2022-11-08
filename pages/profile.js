@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Avatar from "../components/Avatar";
 import Sessions from "../components/Sessions";
 import UserInfo from "../components/UserInfo";
@@ -21,11 +21,20 @@ function ProfileView({ userProp, sessionsProp }) {
       if (!response.ok) {
         throw errors;
       }
+      altogic.auth.clearLocalData();
       router.push("sign-in");
     } catch (err) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    if (userProp && sessionsProp) {
+      const currentSession = sessionsProp.find((s) => s.isCurrent);
+      altogic.auth.setUser(userProp);
+      altogic.auth.setSession(currentSession);
+    }
+  }, []);
 
   return (
     <section className="h-screen py-4 space-y-4 flex flex-col text-center items-center">
@@ -63,7 +72,7 @@ export async function getServerSideProps(context) {
     session.token === token ? { ...session, isCurrent: true } : session
   );
   return {
-    props: { userProp: user, sessionsProp },
+    props: { userProp: user, sessionsProp, token },
   };
 }
 

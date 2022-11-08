@@ -1,8 +1,8 @@
-import { altogic, altogicWithToken } from "../configs/altogic";
+import altogic from "../configs/altogic";
 
 function Sessions({ sessions, setSessions }) {
   const logoutSession = async (session) => {
-    const { errors } = await altogicWithToken(session.token).auth.signOut();
+    const { errors } = await altogic.auth.signOut(session.token);
     if (!errors) {
       setSessions(sessions.filter((s) => s.token !== session.token));
     }
