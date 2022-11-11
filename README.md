@@ -723,7 +723,7 @@ function UserInfo({ user, setUser }) {
 export default UserInfo;
 ```
 
-Replacing components/Sessions.js with the following code:
+Replacing `components/Sessions.js` with the following code:
 ```js
 // components/Sessions.js
 import altogic from "../configs/altogic";
