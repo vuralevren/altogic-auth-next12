@@ -19,21 +19,20 @@ After completion of this tutorial, you will learn:
 
 If you are new to Next applications, this tutorial is definitely for you to understand the basics and even advanced concepts.
 
+## How email-based sign-up works in Altogic
+By default, when you create an app in Altogic, email-based authentication is enabled. In addition, during email-based authentication, the user's email address is also verified. Below you can find the flow of email and password-based sign-up process.
+
+![Auth Flow](github/13-auth-flow.png)
+
+If email verification is disabled, then after step 2, Altogic immediately returns a new session to the user, meaning that steps after step #2 in the above flow are not executed. You can easily configure email-based authentication settings from the App Settings > Authentication in Altogic Designer. You need to specify one critical parameter, the Redirect URL; you can customize this parameter from App Settings > Authentication. Finally, you can customize the email message template from the App Settings > Authentication > Message Templates.
 
 ## Prerequisites
-To complete this tutorial, make sure you have installed the following tools and utilities on your local development environment.
+To complete this tutorial, ensure you have installed the following tools and utilities on your local development environment.
 
 - [VsCode](https://code.visualstudio.com/download)
 - [NodeJS](https://nodejs.org/en/download/)
 - [Next.js 12](https://nextjs.org/docs/getting-started)
 - You also need an Altogic Account. If you do not have one, you can create an account by [signin up for Altogic](https://designer.altogic.com/).
-
-## How email-based sign-up works in Altogic
-By default, when you create an app in Altogic, email-based authentication is enabled. In addition, during email-based authentication, the email address of the user is also verified. Below you can find the flow of email and password-based sign-up process.
-
-![Auth Flow](github/13-auth-flow.png)
-
-If email verification is disabled, then after step 2, Altogic immediately returns a new session to the user, meaning that steps after step #2 in the above flow are not executed. You can easily configure email-based authentication settings from the App Settings > Authentication in Altogic Designer. One critical parameter you need to specify is the Redirect URL, you can also customize this parameter from App Settings > Authentication. Finally, you can also customize the email message template from the App Settings > Authentication > Message Templates.
 
 ## Creating an Altogic App
 After creating an account, you will see the workspace where you can access your apps.
@@ -63,12 +62,13 @@ Click the <strong>Home</strong> icon at the left sidebar to copy the `envUrl` an
 
 ![Client Keys](github/4-client-keys.png)
 
-## Confirm Email
+Once the user is created successfully, our Next.js app will route the user to the Verification page, and a verification email will be sent to the user's email address. When the user clicks the link in the mail, the user will navigate to the redirect page to grant authentication rights. After successfully creating a session on the Redirect page, users will be redirected to the Home page.
 
-Once the user created successfully, our React app will route the user to the Verification page, and a verification email will be sent to the user’s email address. When the user clicks the link in the mail, the user will navigate to the redirect page to grant authentication rights. After successfully creating a session on the Redirect page, users will be redirected to the Home page.
-
-### Quick Tip
 > If you want, you can deactivate or customize the mail verification from **App Settings -> Authentication** in Logic Designer.
+
+![Mail](github/15-mail.png)
+
+We have changed the redirect URL to `http://localhost:3000/auth-redirect`
 
 ## Create a Next.js project
 ```bash
@@ -77,7 +77,7 @@ yarn create next-app
 
 ![Create Next.js](github/11-cli-create.png)
 
-I showed you which options to choose in the image I will give you below. You can choose the same options as I did.
+I showed you which options to choose from the image I will give you below. You can select the same options as I did.
 
 
 ## Integrating with Altogic
@@ -96,7 +96,7 @@ Let’s create a configs/ folder inside of the src/ directory to add altogic.js 
 
 Open altogic.js and paste below code block to export the altogic client instance.
 
-/src/configs/altogic.js
+`/src/configs/altogic.js`
 
 ```javascript
 // /configs/altogic.js
@@ -121,7 +121,7 @@ export default altogic;
 
 ## Create Routes
 
-Next has built-in file system routing. It means that we can create a page by creating a file in the **pages/** directory.
+Next has built-in file system routing. Wwe can create a page by creating a file in the **pages/** directory.
 
 Let's create some views in **pages/** folder as below:
 * index.js
@@ -132,9 +132,9 @@ Let's create some views in **pages/** folder as below:
 * profile.js
 
 ### Index Page
-In this page, we will show Login, Login With Magic Link and Register buttons.
+On this page, we will show the Login, Login With Magic Link, and Register buttons.
 
-Replacing pages/index.js with the following code:
+Replacing `pages/index.js` with the following code:
 ```javascript
 // /pages/index.js
 import Link from "next/link";
@@ -158,9 +158,9 @@ export default IndexView;
 ```
 
 ### Login Page
-In this page, we will show a form to log in with email and password. We will use fetch function to call our backend api. We will save session and user infos to state and storage if the api return success. Then user will be redirected to profile page.
+On this page, we will show a form to log in with your email and password. We will use fetch function to call our backend API. We will save session and user info to state and storage if the API return success. Then the user will be redirected to the profile page.
 
-Replacing pages/sign-in.js with the following code:
+Replacing `pages/sign-in.js` with the following code:
 ```javascript
 // /pages/sign-in.js
 import Link from "next/link";
@@ -243,13 +243,13 @@ export default SignInView;
 ```
 
 ### Register Page
-In this page, we will show a form to sign up with email and password. We will use fetch function to call our sign up api.
+On this page, we will show a form to sign up with email and password. We will use fetch function to call our `sign-up API`.
 
-We will save session and user infos to state and storage if the api return session. Then user will be redirected to profile page.
+We will save the session and user info to state and storage if the API return session. The user will be redirected to the profile page.
 
-If signUpWithEmail does not return session, it means user need to confirm email so we will show the success message. 
+If `signUpWithEmail` does not return the session, the user must confirm the email so we will show the success message.
 
-Replacing pages/sign-up.js with the following code:
+Replacing `pages/sign-up.js` with the following code:
 ```javascript
 // /pages/sign-up.js
 import { useState } from "react";
@@ -352,13 +352,14 @@ export default SignUpView;
 ```
 
 ### Profile Page
-In this page, we will show the user's profile and We will use fetch function to call our sign out api.
+On this page, we will show the user's profile, and We will use fetch function to call our `sign-out API`.
 
-We will remove session and user infos from state and storage if signOut api return success. Then user will be redirected to login page.
+We will remove session and user info from state and storage if the signOut API return success. The user will be redirected to the login page.
 
-This page is protected. Before page loaded, getServerSideProps is called. We will check cookie. If there is token and it's valid, we will sign in and fetch user, session informations. If there is not or not valid, the user will be redirect to sign in page.
+This page is protected. Before the page loads, `getServerSideProps` is called. We will check the cookie. If there is a token and it's valid, we will sign in and fetch user and session information.
+If it is not valid, The user will be redirected to the sign-in page.
 
-Replacing pages/profile.js with the following code:
+Replacing `pages/profile.js` with the following code:
 ```javascript
 // /pages/profile.js
 import { useRouter } from "next/router";
@@ -443,11 +444,11 @@ export default ProfileView;
 ```
 
 ### Auth Redirect Page
-We use this page for verify the user's email address and **Login With Magic Link Authentication.**
+We use this page to verify the user's email address and **Login With Magic Link Authentication.**
 
-We will use Altogic's altogic.auth.getAuthGrant() function to log in with handled token from url.
+We will use Altogic's `altogic.auth.getAuthGrant()` function to log in with the handled token from the URL.
 
-Replacing pages/auth-redirect.js with the following code:
+Replacing `pages/auth-redirect.js` with the following code:
 ```javascript
 // /pages/auth-redirect.js
 import Link from "next/link";
@@ -490,12 +491,10 @@ export default AuthRedirectView;
 
 ```
 
-### Login With Magic Link Page
-In this page, we will show a form to log in with Magic Link with only email. We will use Altogic's altogic.auth.sendMagicLinkEmail() function to log in.
+### Magic Link Page
+On this page, we will show a form to log in with Magic Link with only email. We will use Altogic's `altogic.auth.sendMagicLinkEmail()` function to log in.
 
-### How login With Magic Link Works
-
-If there is a user matching the entered email address, this function sends a link to that user by mail. and if the link in the e-mail is clicked, the user is logged in.
+If a user matches the entered email address, this function sends a link to that user by mail, and if the link in the e-mail is clicked, the user is logged in.
 
 ```javascript
 // /pages/magic-link.js
@@ -571,8 +570,8 @@ function MagicLinkView() {
 export default MagicLinkView;
 ```
 
-# Let's get to the most important point
-Next is a server side rendering tool, we will do some operations on the backend. So we need to create a folder named **api** in pages directory.
+# Handling Authentication
+Next is a server-side rendering tool. We will do some operations on the backend. So we need to create a folder named **API** in the pages directory.
 
 ## Let's create a api folder
 Create a folder named **auth** in pages/api.
@@ -580,8 +579,8 @@ Create a folder named **auth** in pages/api.
 And create files in api folder like image in below
 ![Application](github/12-foldering.png)
 
-### Replacing pages/api/signIn.js with the following code:
-In this file, we have created an endpoint for users to login. And here we are logging in by assigning the session token returned from altogic to the cookie.
+### Replacing `pages/api/signIn.js` with the following code:
+In this file, we have created an endpoint for users to log in. And here, we are logging in by assigning the session token returned from altogic to the cookie.
 ```js
 // /pages/api/auth/sign-in.js
 import altogic from "../../../configs/altogic";
@@ -604,8 +603,8 @@ export default async function handler(req, res) {
 }
 ```
 
-### Replacing pages/api/signUp.js with the following code:
-we have created an endpoint for users to register. And here we are logging in by assigning the session token returned from altogic to the cookie.
+### Replacing `pages/api/signUp.js` with the following code:
+We have created an endpoint for users to register. And here we are logging in by assigning the session token returned from altogic to the cookie.
 ```js
 // /pages/api/auth/sign-up.js
 import altogic from "../../../configs/altogic";
@@ -631,7 +630,7 @@ export default async function handler(req, res) {
 }
 ```
 
-### Replacing pages/api/signOut.js with the following code:
+### Replacing `pages/api/signOut.js` with the following code:
 we have created an endpoint for users to sign out. If there is no error, we have removed token from cookie.
 ```js
 // /pages/api/auth/sign-out.js
@@ -658,7 +657,7 @@ Let's create some components in **src/components/** folder as below:
 * UserInfo.js
 * Sessions.js
 
-Replacing components/UserInfo.js with the following code:
+Replacing `components/UserInfo.js` with the following code:
 ```js
 // components/UserInfo.js
 import { useRef, useState } from "react";
@@ -675,7 +674,6 @@ function UserInfo({ user, setUser }) {
   const handleNameChange = () => {
     setChangeMode(true);
     setTimeout(() => {
-      console.log(inputRef);
       inputRef.current.focus();
     }, 100);
   };
@@ -776,9 +774,9 @@ export default Sessions;
 ```
 
 ## Bonus: Upload Profile Photo
-Let's create a Avatar component for user can upload a profile photo. 
+Let's create an Avatar component for user can upload a profile photo. 
 
-Open Avatar.js and paste the below code to create an avatar for the user. For convenience, we will be using the user's name as the name of the uploaded file and upload the profile picture to the root directory of our app storage. If needed you can create different buckets for each user or a generic bucket to store all provide photos of users. The Altogic Client Library has all the methods to manage buckets and files.
+Open `Avatar.js` and paste the below code to create an avatar for the user. For convenience, we will be using the user's name as the uploaded file's name and uploading the profile picture to the root directory of our app storage. If needed, you can create different buckets for each user or a generic bucket to store all provided photos of users. The Altogic Client Library has all the methods to manage buckets and files.
 
 ```javascript
 // components/Avatar.js
