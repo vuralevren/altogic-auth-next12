@@ -121,7 +121,7 @@ export default altogic;
 
 ## Create Routes
 
-Next has built-in file system routing. Wwe can create a page by creating a file in the **pages/** directory.
+Next has built-in file system routing. We can create a page by creating a file in the **pages/** directory.
 
 Let's create some views in **pages/** folder as below:
 * index.js
