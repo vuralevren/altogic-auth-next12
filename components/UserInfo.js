@@ -4,7 +4,7 @@ import altogic from "../configs/altogic";
 function UserInfo({ user, setUser }) {
   const inputRef = useRef();
 
-  const [inpName, setInpName] = useState("");
+  const [name, setName] = useState("");
 
   const [changeMode, setChangeMode] = useState(false);
   const [errors, setErrors] = useState(null);
@@ -12,7 +12,6 @@ function UserInfo({ user, setUser }) {
   const handleNameChange = () => {
     setChangeMode(true);
     setTimeout(() => {
-      console.log(inputRef);
       inputRef.current.focus();
     }, 100);
   };
@@ -24,7 +23,7 @@ function UserInfo({ user, setUser }) {
       const { data: updatedUser, errors: apiErrors } = await altogic.db
         .model("users")
         .object(user._id)
-        .update({ name: inpName });
+        .update({ name });
 
       if (apiErrors) setErrors(apiErrors.items[0].message);
       else setUser(updatedUser);
@@ -42,8 +41,8 @@ function UserInfo({ user, setUser }) {
             onKeyDown={handleKeyDown}
             type="text"
             className="border-none text-3xl text-center"
-            onChange={(e) => setInpName(e.target.value)}
-            value={inpName}
+            onChange={(e) => setName(e.target.value)}
+            value={name}
           />
         </div>
       ) : (

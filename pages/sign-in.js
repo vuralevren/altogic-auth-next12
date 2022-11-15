@@ -5,23 +5,21 @@ import { useState } from "react";
 function SignInView() {
   const router = useRouter();
 
-  const [inpEmail, setInpEmail] = useState("");
-  const [inpPassword, setInpPassword] = useState("");
-
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    const [email, password] = e.target;
     try {
       setLoading(true);
       const response = await fetch("/api/auth/signIn", {
         method: "POST",
         body: JSON.stringify({
-          email: inpEmail,
-          password: inpPassword,
+          email: email.value,
+          password: password.value,
         }),
       });
-
       if (!response.ok) {
         const { errors } = await response.json();
         throw errors;
@@ -35,26 +33,21 @@ function SignInView() {
 
   return (
     <section className="flex flex-col items-center justify-center h-96 gap-4">
-      <div className="flex flex-col gap-2 w-full md:w-96">
+      <form
+        className="flex flex-col gap-2 w-full md:w-96"
+        onSubmit={handleSignIn}
+      >
         <h1 className="self-start text-3xl font-bold">Login to your account</h1>
         {error?.map(({ message }) => (
           <div key={message} className="bg-red-600 text-white text-[13px] p-2">
             <p>{message}</p>
           </div>
         ))}
-
-        <input
-          type="email"
-          placeholder="Type your email"
-          onChange={(e) => setInpEmail(e.target.value)}
-          value={inpEmail}
-        />
+        <input type="email" placeholder="Type your email" />
         <input
           autoComplete="new-password"
           type="password"
           placeholder="Type your password"
-          onChange={(e) => setInpPassword(e.target.value)}
-          value={inpPassword}
         />
         <div className="flex justify-between gap-4">
           <Link className="text-indigo-600" href="/sign-up">
@@ -64,12 +57,11 @@ function SignInView() {
             type="submit"
             className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
             disabled={loading}
-            onClick={handleSignIn}
           >
             Login
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }

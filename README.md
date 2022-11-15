@@ -1,9 +1,9 @@
-# How to Authenticate Email and Password Using Next.js & Altogic
+# Email & Password Based Authentication Using Next.js 12 & Altogic
 
 ## Introduction
-**Altogic** is a Backend as a Service (BaaS) platform and provides a variety of services in modern web and mobile development. Most of the modern applications using React or other libraries/frameworks require to know the identity of a user. And this necessity allows an app to securely save user data and session in the cloud and provide more personalized functionalities and views to users.
+**Altogic** is a Backend as a Service (BaaS) platform and provides a variety of services in modern web and mobile development. Most of the modern applications using Next.js or other libraries/frameworks require to know the identity of a user. And this necessity allows an app to securely save user data and session in the cloud and provide more personalized functionalities and views to users.
 
-Altogic has an Authentication service that integrates and implements well in JAMstack apps. It has a ready-to-use Javascript client library, and it supports many authentication providers such as email/password, phone number, magic link, and OAuth providers like Google, Facebook, Twitter, Github, etc.,
+Altogic has an Authentication service that integrates and implements well in JAMstack apps. It has a ready-to-use Javascript client library, and it supports many authentication providers such as email/password, phone number, magic link, and OAuth providers like Google, Facebook, Twitter, Github, Apple, etc.,
 
 In this tutorial, we will implement email/password authentication with Next.js and take a look how as a Next developer we build applications and integrate with Altogic Authentication.
 
@@ -25,6 +25,8 @@ By default, when you create an app in Altogic, email-based authentication is ena
 ![Auth Flow](github/13-auth-flow.png)
 
 If email verification is disabled, then after step 2, Altogic immediately returns a new session to the user, meaning that steps after step #2 in the above flow are not executed. You can easily configure email-based authentication settings from the App Settings > Authentication in Altogic Designer. You need to specify one critical parameter, the Redirect URL; you can customize this parameter from App Settings > Authentication. Finally, you can customize the email message template from the App Settings > Authentication > Message Templates.
+
+> For frontend apps that use server-side rendering, the session token needs to be stored in an HTTP cookie so that the client browser and the frontend server can exchange session information. Otherwise, the session information can be lost, and the Altogic Client library methods that require a session token can fail.
 
 ## Prerequisites
 To complete this tutorial, ensure you have installed the following tools and utilities on your local development environment.
@@ -77,13 +79,10 @@ yarn create next-app
 
 ![Create Next.js](github/11-cli-create.png)
 
-I showed you which options to choose from the image I will give you below. You can select the same options as I did.
-
-
 ## Integrating with Altogic
 Our backend and frontend is now ready and running on the server. ✨
 
-Now, we can install the Altogic client library to our React app to connect our frontend with the backend.
+Now, we can install the Altogic client library to our Next.js app to connect our frontend with the backend.
 
 ```sh
 # using npm
@@ -103,10 +102,12 @@ Open altogic.js and paste below code block to export the altogic client instance
 import { createClient } from "altogic";
 
 // This `envUrl` and `clientKey` is sample you need to create your own.
-let envUrl = 'https://auth.c1-na.altogic.com';
-let clientKey = 'e574fee1fb2b443...a8598ca68b7d8';
+let envUrl = "https://auth.c1-europe.altogic.com";
+let clientKey = "e574fee1fb2b443...a8598ca68b7d8";
 
-const altogic = createClient(envUrl, clientKey);
+const altogic = createClient(envUrl, clientKey, {
+  signInRedirect: "/sign-in",
+});
 
 // We will use this function in server-side.
 export const altogicWithToken = (token) => {
@@ -118,6 +119,8 @@ export default altogic;
 ```
 
 > Replace envUrl and clientKey which is shown in the <strong>Home</strong> view of [Altogic Designer](https://designer.altogic.com/).
+
+> `signInRedirect` is the sign in page URL to redirect the user when user's session becomes invalid. Altogic client library observes the responses of the requests made to your app backend. If it detects a response with an error code of missing or invalid session token, it can redirect the users to this signin url.
 
 ## Create Routes
 
@@ -158,7 +161,7 @@ export default IndexView;
 ```
 
 ### Login Page
-On this page, we will show a form to log in with your email and password. We will use fetch function to call our backend API. We will save session and user info to state and storage if the API return success. Then the user will be redirected to the profile page.
+On this page, we will show a form to log in with your email and password. We will use fetch function to call our backend API. We will save session and user info to state and storage if the API returns success. Then the user will be redirected to the profile page.
 
 Replacing `pages/sign-in.js` with the following code:
 ```javascript
@@ -170,23 +173,21 @@ import { useState } from "react";
 function SignInView() {
   const router = useRouter();
 
-  const [inpEmail, setInpEmail] = useState("");
-  const [inpPassword, setInpPassword] = useState("");
-
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    const [email, password] = e.target;
     try {
       setLoading(true);
       const response = await fetch("/api/auth/signIn", {
         method: "POST",
         body: JSON.stringify({
-          email: inpEmail,
-          password: inpPassword,
+          email: email.value,
+          password: password.value,
         }),
       });
-
       if (!response.ok) {
         const { errors } = await response.json();
         throw errors;
@@ -200,26 +201,21 @@ function SignInView() {
 
   return (
     <section className="flex flex-col items-center justify-center h-96 gap-4">
-      <div className="flex flex-col gap-2 w-full md:w-96">
+      <form
+        className="flex flex-col gap-2 w-full md:w-96"
+        onSubmit={handleSignIn}
+      >
         <h1 className="self-start text-3xl font-bold">Login to your account</h1>
         {error?.map(({ message }) => (
           <div key={message} className="bg-red-600 text-white text-[13px] p-2">
             <p>{message}</p>
           </div>
         ))}
-
-        <input
-          type="email"
-          placeholder="Type your email"
-          onChange={(e) => setInpEmail(e.target.value)}
-          value={inpEmail}
-        />
+        <input type="email" placeholder="Type your email" />
         <input
           autoComplete="new-password"
           type="password"
           placeholder="Type your password"
-          onChange={(e) => setInpPassword(e.target.value)}
-          value={inpPassword}
         />
         <div className="flex justify-between gap-4">
           <Link className="text-indigo-600" href="/sign-up">
@@ -229,12 +225,11 @@ function SignInView() {
             type="submit"
             className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
             disabled={loading}
-            onClick={handleSignIn}
           >
             Login
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }
@@ -245,7 +240,7 @@ export default SignInView;
 ### Register Page
 On this page, we will show a form to sign up with email and password. We will use fetch function to call our `sign-up API`.
 
-We will save the session and user info to state and storage if the API return session. The user will be redirected to the profile page.
+We will save the session and user info to state and storage if the API returns session. The user will be redirected to the profile page.
 
 If `signUpWithEmail` does not return the session, the user must confirm the email so we will show the success message.
 
@@ -259,23 +254,21 @@ import { useRouter } from "next/router";
 function SignUpView() {
   const router = useRouter();
 
-  const [inpName, setInpName] = useState("");
-  const [inpEmail, setInpEmail] = useState("");
-  const [inpPassword, setInpPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState(null);
 
-  const handleSignUp = async () => {
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    const [name, email, password] = e.target;
     try {
       setLoading(true);
       const response = await fetch("/api/auth/signUp", {
         method: "POST",
         body: JSON.stringify({
-          name: inpName,
-          email: inpEmail,
-          password: inpPassword,
+          name: name.value,
+          email: email.value,
+          password: password.value,
         }),
       });
       const { session, errors } = await response.json();
@@ -287,9 +280,12 @@ function SignUpView() {
       if (session) {
         router.replace("/profile");
       } else {
-        setSuccess(`We sent a verification link to ${inpEmail}`);
+        setSuccess(`We sent a verification link to ${email.value}`);
         setError(null);
         setLoading(false);
+        name.value = "";
+        email.value = "";
+        password.value = "";
       }
     } catch (err) {
       setSuccess(null);
@@ -300,7 +296,10 @@ function SignUpView() {
 
   return (
     <section className="flex flex-col items-center justify-center h-96 gap-4">
-      <div className="flex flex-col gap-2 w-full md:w-96">
+      <form
+        className="flex flex-col gap-2 w-full md:w-96"
+        onSubmit={handleSignUp}
+      >
         <h1 className="self-start text-3xl font-bold">Create an account</h1>
         {success && (
           <div className="bg-green-500 text-white p-2">{success}</div>
@@ -311,24 +310,12 @@ function SignUpView() {
           </div>
         ))}
 
-        <input
-          type="text"
-          placeholder="Type your name"
-          onChange={(e) => setInpName(e.target.value)}
-          value={inpName}
-        />
-        <input
-          type="email"
-          placeholder="Type your email"
-          onChange={(e) => setInpEmail(e.target.value)}
-          value={inpEmail}
-        />
+        <input type="text" placeholder="Type your name" />
+        <input type="email" placeholder="Type your email" />
         <input
           autoComplete="new-password"
           type="password"
           placeholder="Type your password"
-          onChange={(e) => setInpPassword(e.target.value)}
-          value={inpPassword}
         />
         <div className="flex justify-between gap-4">
           <Link className="text-indigo-600" href="/sign-in">
@@ -338,12 +325,11 @@ function SignUpView() {
             type="submit"
             className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
             disabled={loading}
-            onClick={handleSignUp}
           >
             Register
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }
@@ -352,11 +338,11 @@ export default SignUpView;
 ```
 
 ### Profile Page
-On this page, we will show the user's profile, and We will use fetch function to call our `sign-out API`.
+On this page, we will show the user's profile, and we will use fetch function to call our `sign-out API`.
 
 We will remove session and user info from state and storage if the signOut API return success. The user will be redirected to the login page.
 
-This page is protected. Before the page loads, `getServerSideProps` is called. We will check the cookie. If there is a token and it's valid, we will sign in and fetch user and session information.
+This page is protected. Before the page loads, `getServerSideProps` is called. We will check the cookie. If there is a session token and it's valid, we will sign in and fetch user and session information.
 If it is not valid, The user will be redirected to the sign-in page.
 
 Replacing `pages/profile.js` with the following code:
@@ -444,9 +430,9 @@ export default ProfileView;
 ```
 
 ### Auth Redirect Page
-We use this page to verify the user's email address and **Login With Magic Link Authentication.**
+We use this page to verify the user's email address and process magic link. This is the page where the user is redirected when clicked on the sign-up email confirmation link or the magic link.
 
-We will use Altogic's `altogic.auth.getAuthGrant()` function to log in with the handled token from the URL.
+We will use Altogic's `altogic.auth.getAuthGrant()` function to log in with the handled access_token from the URL and use this access_token to create a new user session and associated `sessionToken`.
 
 Replacing `pages/auth-redirect.js` with the following code:
 ```javascript
@@ -494,7 +480,7 @@ export default AuthRedirectView;
 ### Magic Link Page
 On this page, we will show a form to log in with Magic Link with only email. We will use Altogic's `altogic.auth.sendMagicLinkEmail()` function to log in.
 
-If a user matches the entered email address, this function sends a link to that user by mail, and if the link in the e-mail is clicked, the user is logged in.
+When the user clicks on the magic link in the email, Altogic verifies the validity of the magic link and, if successful, redirects the user to the redirect URL specified in your app authentication settings with an access token in a query string parameter named `access_token.` The magic link flows in a similar way to the sign-up process. We use the `getAuthGrant` method explained above to create a new session and associated `sessionToken`.
 
 ```javascript
 // /pages/magic-link.js
@@ -503,32 +489,35 @@ import { useState } from "react";
 import altogic from "../configs/altogic";
 
 function MagicLinkView() {
-  const [inpEmail, setInpEmail] = useState("");
-
   const [success, setSuccess] = useState("");
   const [errors, setErrors] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  async function loginHandler() {
+  async function loginHandler(e) {
+    e.preventDefault();
+    const [email] = e.target;
     setLoading(true);
     setErrors(null);
 
     const { errors: apiErrors } = await altogic.auth.sendMagicLinkEmail(
-      inpEmail
+      email.value
     );
     setLoading(false);
 
     if (apiErrors) {
       setErrors(apiErrors.items);
     } else {
-      setInpEmail("");
+      email.value = "";
       setSuccess("Email sent! Check your inbox.");
     }
   }
 
   return (
     <section className="flex flex-col items-center justify-center h-96 gap-4">
-      <div className="flex flex-col gap-2 w-full md:w-96">
+      <form
+        className="flex flex-col gap-2 w-full md:w-96"
+        onSubmit={loginHandler}
+      >
         <h1 className="self-start text-3xl font-bold">Login with magic link</h1>
         {success && (
           <div className="bg-green-600 text-white text-[13px] p-2">
@@ -543,12 +532,7 @@ function MagicLinkView() {
           </div>
         )}
 
-        <input
-          type="email"
-          placeholder="Type your email"
-          onChange={(e) => setInpEmail(e.target.value)}
-          value={inpEmail}
-        />
+        <input type="email" placeholder="Type your email" />
         <div className="flex justify-between gap-4">
           <Link class="text-indigo-600" href="/sign-up">
             Don't have an account? Register now
@@ -557,12 +541,11 @@ function MagicLinkView() {
             disabled={loading}
             type="submit"
             className="border py-2 px-3 border-gray-500 hover:bg-gray-500 hover:text-white transition shrink-0"
-            onClick={loginHandler}
           >
             Send magic link
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }
@@ -571,12 +554,14 @@ export default MagicLinkView;
 ```
 
 # Handling Authentication
-Next is a server-side rendering tool. We will do some operations on the backend. So we need to create a folder named **API** in the pages directory.
+Next is a server-side rendering tool. We will do some operations on the Next.js server. So we need to create a folder named **API** in the pages directory.
+
+For client-side (browser) rendered frontend apps, Altogic automatically stores the `sessionToken` in local storage. For server-side rendered frontend apps, since we do not have local storage available, we need to store the `sessionToken` somewhere to check whether the user has been authenticated or not. For this reason, we will store the `sessionToken` in an HTTP cookie named “session” which will be exchanged between the client browser and the front end server.
 
 ## Let's create a api folder
 Create a folder named **auth** in pages/api.
 
-And create files in api folder like image in below
+And create files in api folder similar to the image below
 ![Application](github/12-foldering.png)
 
 ### Replacing `pages/api/signIn.js` with the following code:
@@ -604,7 +589,10 @@ export default async function handler(req, res) {
 ```
 
 ### Replacing `pages/api/signUp.js` with the following code:
-We have created an endpoint for users to register. And here we are logging in by assigning the session token returned from altogic to the cookie.
+We have created an endpoint for users to register.
+
+> `signUpWithEmail` function can accept optional  third parameter data to save the user's profile. We will save the user's name to the database in this example.
+
 ```js
 // /pages/api/auth/sign-up.js
 import altogic from "../../../configs/altogic";
@@ -631,15 +619,15 @@ export default async function handler(req, res) {
 ```
 
 ### Replacing `pages/api/signOut.js` with the following code:
-we have created an endpoint for users to sign out. If there is no error, we have removed token from cookie.
+We have created an endpoint for users to sign out. If there is no error, we remove the `sessionToken` from the HTTP cookie.
 ```js
 // /pages/api/auth/sign-out.js
-import { altogicWithToken } from "../../../configs/altogic";
+import altogic, { altogicWithToken } from "../../../configs/altogic";
 
 export default async function handler(req, res) {
   const token = req.cookies.session_token;
   const { errors } = await altogicWithToken(token).auth.signOut();
-  res.removeHeader("session_token");
+  altogic.auth.removeSessionCookie(req, res);
 
   if (errors) {
     res.status(errors.status).json({ errors });
@@ -650,7 +638,7 @@ export default async function handler(req, res) {
 ```
 
 ## Updating User Info
-In this components, we will use Altogic's database operations to update the user fields and managing sessions.
+In this component, we will use Altogic's database operations to update user fields and manage sessions.
 
 
 Let's create some components in **src/components/** folder as below:
@@ -666,7 +654,7 @@ import altogic from "../configs/altogic";
 function UserInfo({ user, setUser }) {
   const inputRef = useRef();
 
-  const [inpName, setInpName] = useState("");
+  const [name, setName] = useState("");
 
   const [changeMode, setChangeMode] = useState(false);
   const [errors, setErrors] = useState(null);
@@ -685,7 +673,7 @@ function UserInfo({ user, setUser }) {
       const { data: updatedUser, errors: apiErrors } = await altogic.db
         .model("users")
         .object(user._id)
-        .update({ name: inpName });
+        .update({ name });
 
       if (apiErrors) setErrors(apiErrors.items[0].message);
       else setUser(updatedUser);
@@ -703,8 +691,8 @@ function UserInfo({ user, setUser }) {
             onKeyDown={handleKeyDown}
             type="text"
             className="border-none text-3xl text-center"
-            onChange={(e) => setInpName(e.target.value)}
-            value={inpName}
+            onChange={(e) => setName(e.target.value)}
+            value={name}
           />
         </div>
       ) : (
@@ -774,9 +762,9 @@ export default Sessions;
 ```
 
 ## Bonus: Upload Profile Photo
-Let's create an Avatar component for user can upload a profile photo. 
+Let's create an Avatar component to upload a profile photo. 
 
-Open `Avatar.js` and paste the below code to create an avatar for the user. For convenience, we will be using the user's name as the uploaded file's name and uploading the profile picture to the root directory of our app storage. If needed, you can create different buckets for each user or a generic bucket to store all provided photos of users. The Altogic Client Library has all the methods to manage buckets and files.
+Open `Avatar.js` and paste the below code to create an avatar for the user. For convenience, we will be using the user's `_id` as the uploaded file's name and uploading the profile picture to the root directory of our app storage. If needed, you can create different buckets for each user or a generic bucket to store all provided photos of users. The Altogic Client Library has all the methods to manage buckets and files.
 
 ```javascript
 // components/Avatar.js
@@ -806,7 +794,7 @@ function Avatar({ user, setUser }) {
   const updateProfilePicture = async (file) => {
     const { data, errors } = await altogic.storage
       .bucket("root")
-      .upload(file.name, file);
+      .upload(`user_${user._id}`, file);
     if (errors) throw new Error("Couldn't upload file");
     return data;
   };
